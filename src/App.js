@@ -14,7 +14,7 @@ function App() {
           target="_blank"
           rel="noopener noreferrer"
         >
-          Saucisses végétales Herta
+          Saucisses végétales Herta Modifiée
         </a>
       </header>
     </div>
