@@ -230,6 +230,8 @@ Resources:
   #            - s3:PutObjectAcl
   #           Resource: !Sub '${GTOStaticWebsiteBucket.Arn}/*'
 
+  
+
 Outputs:
   GTOApiGatewayUrl:
     Value: !Sub 'https://${GTOApiGateway}.execute-api.${AWS::Region}.amazonaws.com/prod'
