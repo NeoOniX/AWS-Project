@@ -207,33 +207,33 @@ Resources:
         Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GTODeliveriesLambdaFunction.Arn}/invocations
 
   # S3 Bucket
-  GTOStaticWebsiteBucket:
-    Type: AWS::S3::Bucket
-    Properties:
-      BucketName: gto-static-website-bucket
-      WebsiteConfiguration:
-        IndexDocument: index.html
-        ErrorDocument: error.html
+  # GTOStaticWebsiteBucket:
+  #   Type: AWS::S3::Bucket
+  #   Properties:
+  #     BucketName: gto-static-website-bucket
+  #     WebsiteConfiguration:
+  #       IndexDocument: index.html
+  #       ErrorDocument: error.html
 
-  GTOStaticWebsiteBucketPolicy:
-    Type: AWS::S3::BucketPolicy
-    Properties:
-      Bucket: !Ref GTOStaticWebsiteBucket
-      PolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Sid: PublicReadGetObject
-            Effect: Allow
-            Principal: '*'
-            Action:
-             - s3:GetObject
-             - s3:PutObjectAcl
-            Resource: !Sub '${GTOStaticWebsiteBucket.Arn}/*'
+  # GTOStaticWebsiteBucketPolicy:
+  #   Type: AWS::S3::BucketPolicy
+  #   Properties:
+  #     Bucket: !Ref GTOStaticWebsiteBucket
+  #     PolicyDocument:
+  #       Version: '2012-10-17'
+  #       Statement:
+  #         - Sid: PublicReadGetObject
+  #           Effect: Allow
+  #           Principal: '*'
+  #           Action:
+  #            - s3:GetObject
+  #            - s3:PutObjectAcl
+  #           Resource: !Sub '${GTOStaticWebsiteBucket.Arn}/*'
 
 Outputs:
   GTOApiGatewayUrl:
     Value: !Sub 'https://${GTOApiGateway}.execute-api.${AWS::Region}.amazonaws.com/prod'
     Description: URL de l'API Gateway.
-  GTOS3WebsiteUrl:
-    Value: !Sub 'http://${GTOStaticWebsiteBucket}.s3-website-${AWS::Region}.amazonaws.com'
-    Description: URL de l'hébergement web statique S3.
+  # GTOS3WebsiteUrl:
+  #   Value: !Sub 'http://${GTOStaticWebsiteBucket}.s3-website-${AWS::Region}.amazonaws.com'
+  #   Description: URL de l'hébergement web statique S3.
