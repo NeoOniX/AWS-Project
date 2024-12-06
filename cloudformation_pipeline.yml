@@ -115,7 +115,7 @@ Resources:
       Role: !GetAtt 
         - HertaFunctionRole
         - Arn
-      Runtime: nodejs14.x
+      Runtime: nodejs20.x
   HertaPostApiGateway:
     Type: 'AWS::ApiGateway::Method'
     Properties:
