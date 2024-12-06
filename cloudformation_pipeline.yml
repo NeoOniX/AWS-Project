@@ -1,154 +1,237 @@
 Resources:
-  HertaDynamoDB:
-    Type: 'AWS::DynamoDB::Table'
+  # DynamoDB Tables
+  GTOEmployesTable:
+    Type: AWS::DynamoDB::Table
     Properties:
-      BillingMode: PAY_PER_REQUEST
+      TableName: GTOEmployes
       AttributeDefinitions:
-        - AttributeName: id
+        - AttributeName: EmployeeID
           AttributeType: S
       KeySchema:
-        - AttributeName: id
+        - AttributeName: EmployeeID
           KeyType: HASH
-  HertaRestApi:
-    Type: 'AWS::ApiGateway::RestApi'
+      BillingMode: PAY_PER_REQUEST
+
+  GTOTrucksTable:
+    Type: AWS::DynamoDB::Table
     Properties:
-      EndpointConfiguration:
-        Types:
-          - REGIONAL
-      Name: hertaapi
-  HertaRestApiDeployment:
-    Type: 'AWS::ApiGateway::Deployment'
-    DependsOn:
-      - HertaApiGatewayMethod
+      TableName: GTOTrucks
+      AttributeDefinitions:
+        - AttributeName: TruckID
+          AttributeType: S
+      KeySchema:
+        - AttributeName: TruckID
+          KeyType: HASH
+      BillingMode: PAY_PER_REQUEST
+
+  GTODeliveriesTable:
+    Type: AWS::DynamoDB::Table
     Properties:
-      RestApiId: !Ref HertaRestApi
-      StageName: test
-  HertaApiGatewayResource:
-    Type: 'AWS::ApiGateway::Resource'
+      TableName: GTODeliveries
+      AttributeDefinitions:
+        - AttributeName: DeliveryID
+          AttributeType: S
+      KeySchema:
+        - AttributeName: DeliveryID
+          KeyType: HASH
+      BillingMode: PAY_PER_REQUEST
+
+  # Lambda Functions
+  GTOEmployesLambdaFunction:
+    Type: AWS::Lambda::Function
     Properties:
-      ParentId: !GetAtt 
-        - HertaRestApi
-        - RootResourceId
-      PathPart: herta
-      RestApiId: !Ref HertaRestApi
-  HertaApiGatewayMethod:
-    Type: 'AWS::ApiGateway::Method'
-    DependsOn:
-      - HertaFunctionApiGatewayPermission
+      FunctionName: GTOGetEmployes
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Code:
+        ZipFile: |
+          const AWS = require('aws-sdk');
+          const dynamodb = new AWS.DynamoDB.DocumentClient();
+
+          exports.handler = async (event) => {
+              const params = { TableName: 'GTOEmployes' };
+              try {
+                  const data = await dynamodb.scan(params).promise();
+                  return {
+                      statusCode: 200,
+                      body: JSON.stringify(data.Items),
+                  };
+              } catch (error) {
+                  return {
+                      statusCode: 500,
+                      body: JSON.stringify({ error: error.message }),
+                  };
+              }
+          };
+      Role: !GetAtt GTOLambdaExecutionRole.Arn
+
+  GTOTrucksLambdaFunction:
+    Type: AWS::Lambda::Function
     Properties:
-      ApiKeyRequired: false
-      AuthorizationType: NONE
-      HttpMethod: GET
-      Integration:
-        IntegrationHttpMethod: POST
-        Type: AWS_PROXY
-        Uri: !Join 
-          - ''
-          - - 'arn:'
-            - !Ref 'AWS::Partition'
-            - ':apigateway:'
-            - !Ref 'AWS::Region'
-            - ':lambda:path/2015-03-31/functions/'
-            - !GetAtt 
-              - HertaFunction
-              - Arn
-            - /invocations
-      ResourceId: !Ref HertaApiGatewayResource
-      RestApiId: !Ref HertaRestApi
-  HertaFunctionApiGatewayPermission:
-    Type: 'AWS::Lambda::Permission'
+      FunctionName: GTOGetTrucks
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Code:
+        ZipFile: |
+          const AWS = require('aws-sdk');
+          const dynamodb = new AWS.DynamoDB.DocumentClient();
+
+          exports.handler = async (event) => {
+              const params = { TableName: 'GTOTrucks' };
+              try {
+                  const data = await dynamodb.scan(params).promise();
+                  return {
+                      statusCode: 200,
+                      body: JSON.stringify(data.Items),
+                  };
+              } catch (error) {
+                  return {
+                      statusCode: 500,
+                      body: JSON.stringify({ error: error.message }),
+                  };
+              }
+          };
+      Role: !GetAtt GTOLambdaExecutionRole.Arn
+
+  GTODeliveriesLambdaFunction:
+    Type: AWS::Lambda::Function
     Properties:
-      Action: 'lambda:InvokeFunction'
-      FunctionName: !GetAtt 
-        - HertaFunction
-        - Arn
-      Principal: apigateway.amazonaws.com
-      SourceArn: !Join 
-        - ''
-        - - 'arn:'
-          - !Ref 'AWS::Partition'
-          - ':execute-api:'
-          - !Ref 'AWS::Region'
-          - ':'
-          - !Ref 'AWS::AccountId'
-          - ':'
-          - !Ref HertaRestApi
-          - /*/*
-  HertaFunctionRole:
-    Type: 'AWS::IAM::Role'
+      FunctionName: GTOGetDeliveries
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Code:
+        ZipFile: |
+          const AWS = require('aws-sdk');
+          const dynamodb = new AWS.DynamoDB.DocumentClient();
+
+          exports.handler = async (event) => {
+              const params = { TableName: 'GTODeliveries' };
+              try {
+                  const data = await dynamodb.scan(params).promise();
+                  return {
+                      statusCode: 200,
+                      body: JSON.stringify(data.Items),
+                  };
+              } catch (error) {
+                  return {
+                      statusCode: 500,
+                      body: JSON.stringify({ error: error.message }),
+                  };
+              }
+          };
+      Role: !GetAtt GTOLambdaExecutionRole.Arn
+
+  GTOLambdaExecutionRole:
+    Type: AWS::IAM::Role
     Properties:
+      RoleName: GTOLambdaDynamoDBExecutionRole
       AssumeRolePolicyDocument:
-        Version: 2012-10-17
+        Version: '2012-10-17'
         Statement:
           - Effect: Allow
             Principal:
-              Service:
-                - lambda.amazonaws.com
-            Action:
-              - 'sts:AssumeRole'
-      Path: /
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
       Policies:
-        - PolicyName: AppendToLogsPolicy
+        - PolicyName: GTODynamoDBAccessPolicy
           PolicyDocument:
-            Version: 2012-10-17
+            Version: '2012-10-17'
             Statement:
               - Effect: Allow
                 Action:
-                  - 'logs:CreateLogGroup'
-                  - 'logs:CreateLogStream'
-                  - 'logs:PutLogEvents'
-                Resource: '*'
-  HertaFunction:
-    Type: 'AWS::Lambda::Function'
+                  - dynamodb:Scan
+                  - dynamodb:GetItem
+                Resource: 
+                  - !GetAtt GTOEmployesTable.Arn
+                  - !GetAtt GTOTrucksTable.Arn
+                  - !GetAtt GTODeliveriesTable.Arn
+
+  # API Gateway
+  GTOApiGateway:
+    Type: AWS::ApiGateway::RestApi
     Properties:
-      Code:
-        ZipFile: |
-          exports.handler = async (event) => {
-            return {
-              isBase64Encoded: false,
-              statusCode:      200,
-              headers:         { "content-type": "text/plain"},
-              body:            `Your request:\n\n${JSON.stringify(event)}`
-            }
-          }
-      Handler: index.handler
-      Role: !GetAtt 
-        - HertaFunctionRole
-        - Arn
-      Runtime: nodejs20.x
-  HertaPostApiGateway:
-    Type: 'AWS::ApiGateway::Method'
+      Name: GTOCompanyApi
+
+  GTOEmployesResource:
+    Type: AWS::ApiGateway::Resource
     Properties:
-      ApiKeyRequired: false
-      AuthorizationType: NONE
-      HttpMethod: POST
+      ParentId: !GetAtt GTOApiGateway.RootResourceId
+      PathPart: employes
+      RestApiId: !Ref GTOApiGateway
+
+  GTOEmployesMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      HttpMethod: GET
+      ResourceId: !Ref GTOEmployesResource
+      RestApiId: !Ref GTOApiGateway
       Integration:
-        IntegrationHttpMethod: POST
         Type: AWS_PROXY
-        Uri: !Join 
-          - ''
-          - - 'arn:'
-            - !Ref 'AWS::Partition'
-            - ':apigateway:'
-            - !Ref 'AWS::Region'
-            - ':lambda:path/2015-03-31/functions/'
-            - !GetAtt 
-              - HertaFunction
-              - Arn
-            - /invocations
-      ResourceId: !Ref HertaApiGatewayResource
-      RestApiId: !Ref HertaRestApi
-    DependsOn:
-      - HertaFunctionApiGatewayPermission
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GTOEmployesLambdaFunction.Arn}/invocations
+
+  GTOTrucksResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      ParentId: !GetAtt GTOApiGateway.RootResourceId
+      PathPart: trucks
+      RestApiId: !Ref GTOApiGateway
+
+  GTOTrucksMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      HttpMethod: GET
+      ResourceId: !Ref GTOTrucksResource
+      RestApiId: !Ref GTOApiGateway
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GTOTrucksLambdaFunction.Arn}/invocations
+
+  GTODeliveriesResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      ParentId: !GetAtt GTOApiGateway.RootResourceId
+      PathPart: deliveries
+      RestApiId: !Ref GTOApiGateway
+
+  GTODeliveriesMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      HttpMethod: GET
+      ResourceId: !Ref GTODeliveriesResource
+      RestApiId: !Ref GTOApiGateway
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GTODeliveriesLambdaFunction.Arn}/invocations
+
+  # S3 Bucket
+  GTOStaticWebsiteBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: gto-static-website-bucket
+      WebsiteConfiguration:
+        IndexDocument: index.html
+        ErrorDocument: error.html
+
+  GTOStaticWebsiteBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref GTOStaticWebsiteBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: PublicReadGetObject
+            Effect: Allow
+            Principal: '*'
+            Action: s3:GetObject
+            Resource: !Sub '${GTOStaticWebsiteBucket.Arn}/*'
+
 Outputs:
-  ApiUrl:
-    Description: URL of the REST API.
-    Value: !Join 
-      - ''
-      - - 'https://'
-        - !Ref HertaRestApi
-        - .execute-api.
-        - !Ref 'AWS::Region'
-        - .
-        - !Ref 'AWS::URLSuffix'
-        - /test
+  GTOApiGatewayUrl:
+    Value: !Sub 'https://${GTOApiGateway}.execute-api.${AWS::Region}.amazonaws.com/prod'
+    Description: URL de l'API Gateway.
+  GTOS3WebsiteUrl:
+    Value: !Sub 'http://${GTOStaticWebsiteBucket}.s3-website-${AWS::Region}.amazonaws.com'
+    Description: URL de l'hébergement web statique S3.
