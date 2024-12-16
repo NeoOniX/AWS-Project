@@ -36,7 +36,7 @@ Resources:
           KeyType: HASH
       BillingMode: PAY_PER_REQUEST
 
-  # Lambda Functions
+  # LambdaFunctions
   GTOEmployesLambdaFunction:
     Type: AWS::Lambda::Function
     Properties:
@@ -45,13 +45,13 @@ Resources:
       Runtime: nodejs18.x
       Code:
         ZipFile: |
-          const AWS = require('aws-sdk');
-          const dynamodb = new AWS.DynamoDB.DocumentClient();
+          const { DynamoDBClient, ScanCommand } = require('@aws-sdk/client-dynamodb');
+          const client = new DynamoDBClient();
 
           exports.handler = async (event) => {
               const params = { TableName: 'GTOEmployes' };
               try {
-                  const data = await dynamodb.scan(params).promise();
+                  const data = await client.send(new ScanCommand(params));
                   return {
                       statusCode: 200,
                       body: JSON.stringify(data.Items),
@@ -63,6 +63,7 @@ Resources:
                   };
               }
           };
+
       Role: !GetAtt GTOLambdaExecutionRole.Arn
 
   GTOTrucksLambdaFunction:
@@ -73,13 +74,13 @@ Resources:
       Runtime: nodejs18.x
       Code:
         ZipFile: |
-          const AWS = require('aws-sdk');
-          const dynamodb = new AWS.DynamoDB.DocumentClient();
+          const { DynamoDBClient, ScanCommand } = require('@aws-sdk/client-dynamodb');
+          const client = new DynamoDBClient();
 
           exports.handler = async (event) => {
               const params = { TableName: 'GTOTrucks' };
               try {
-                  const data = await dynamodb.scan(params).promise();
+                  const data = await client.send(new ScanCommand(params));
                   return {
                       statusCode: 200,
                       body: JSON.stringify(data.Items),
@@ -91,6 +92,7 @@ Resources:
                   };
               }
           };
+
       Role: !GetAtt GTOLambdaExecutionRole.Arn
 
   GTODeliveriesLambdaFunction:
@@ -101,13 +103,13 @@ Resources:
       Runtime: nodejs18.x
       Code:
         ZipFile: |
-          const AWS = require('aws-sdk');
-          const dynamodb = new AWS.DynamoDB.DocumentClient();
+          const { DynamoDBClient, ScanCommand } = require('@aws-sdk/client-dynamodb');
+          const client = new DynamoDBClient();
 
           exports.handler = async (event) => {
               const params = { TableName: 'GTODeliveries' };
               try {
-                  const data = await dynamodb.scan(params).promise();
+                  const data = await client.send(new ScanCommand(params));
                   return {
                       statusCode: 200,
                       body: JSON.stringify(data.Items),
@@ -165,10 +167,19 @@ Resources:
       HttpMethod: GET
       ResourceId: !Ref GTOEmployesResource
       RestApiId: !Ref GTOApiGateway
+      AuthorizationType: NONE
       Integration:
         Type: AWS_PROXY
         IntegrationHttpMethod: POST
         Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GTOEmployesLambdaFunction.Arn}/invocations
+
+  GTOEmployesLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref GTOEmployesLambdaFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${GTOApiGateway}/*
 
   GTOTrucksResource:
     Type: AWS::ApiGateway::Resource
@@ -183,10 +194,19 @@ Resources:
       HttpMethod: GET
       ResourceId: !Ref GTOTrucksResource
       RestApiId: !Ref GTOApiGateway
+      AuthorizationType: NONE
       Integration:
         Type: AWS_PROXY
         IntegrationHttpMethod: POST
         Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GTOTrucksLambdaFunction.Arn}/invocations
+
+  GTOTrucksLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref GTOTrucksLambdaFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${GTOApiGateway}/*
 
   GTODeliveriesResource:
     Type: AWS::ApiGateway::Resource
@@ -201,41 +221,60 @@ Resources:
       HttpMethod: GET
       ResourceId: !Ref GTODeliveriesResource
       RestApiId: !Ref GTOApiGateway
+      AuthorizationType: NONE
       Integration:
         Type: AWS_PROXY
         IntegrationHttpMethod: POST
         Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GTODeliveriesLambdaFunction.Arn}/invocations
 
+  GTODeliveriesLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref GTODeliveriesLambdaFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${GTOApiGateway}/*
+
+  # Deployment and Stage
+  GTOApiGatewayDeployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn:
+      - GTOEmployesMethod
+      - GTOTrucksMethod
+      - GTODeliveriesMethod
+    Properties:
+      RestApiId: !Ref GTOApiGateway
+      StageName: prod
+
   # S3 Bucket
-  # GTOStaticWebsiteBucket:
-  #   Type: AWS::S3::Bucket
-  #   Properties:
-  #     BucketName: gto-static-website-bucket
-  #     WebsiteConfiguration:
-  #       IndexDocument: index.html
-  #       ErrorDocument: error.html
+  GTOStaticWebsiteBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: gto-static-website-bucket
+      WebsiteConfiguration:
+        IndexDocument: index.html
+        ErrorDocument: error.html
 
-  # GTOStaticWebsiteBucketPolicy:
-  #   Type: AWS::S3::BucketPolicy
-  #   Properties:
-  #     Bucket: !Ref GTOStaticWebsiteBucket
-  #     PolicyDocument:
-  #       Version: '2012-10-17'
-  #       Statement:
-  #         - Sid: PublicReadGetObject
-  #           Effect: Allow
-  #           Principal: '*'
-  #           Action:
-  #            - s3:GetObject
-  #            - s3:PutObjectAcl
-  #           Resource: !Sub '${GTOStaticWebsiteBucket.Arn}/*'
-
-  
+  GTOStaticWebsiteBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref GTOStaticWebsiteBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: PublicReadGetObject
+            Effect: Allow
+            Principal: 
+              AWS: "arn:aws:iam::719862224486:root"
+            Action:
+             - s3:GetObject
+             - s3:PutObjectAcl
+            Resource: !Sub '${GTOStaticWebsiteBucket.Arn}/*'
 
 Outputs:
   GTOApiGatewayUrl:
     Value: !Sub 'https://${GTOApiGateway}.execute-api.${AWS::Region}.amazonaws.com/prod'
     Description: URL de l'API Gateway.
-  # GTOS3WebsiteUrl:
-  #   Value: !Sub 'http://${GTOStaticWebsiteBucket}.s3-website-${AWS::Region}.amazonaws.com'
-  #   Description: URL de l'hébergement web statique S3.
+  GTOS3WebsiteUrl:
+    Value: !Sub 'http://${GTOStaticWebsiteBucket}.s3-website-${AWS::Region}.amazonaws.com'
+    Description: URL de l'hébergement web statique S3.
