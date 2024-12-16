@@ -250,7 +250,7 @@ Resources:
   GTStaticWebsiteBucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: GT-static-website-bucket
+      BucketName: gt-static-website-bucket
       WebsiteConfiguration:
         IndexDocument: index.html
         ErrorDocument: error.html
