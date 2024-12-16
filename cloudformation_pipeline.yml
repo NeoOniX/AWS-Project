@@ -45,13 +45,13 @@ Resources:
       Runtime: nodejs18.x
       Code:
         ZipFile: |
-          const AWS = require('aws-sdk');
-          const dynamodb = new AWS.DynamoDB.DocumentClient();
+          const { DynamoDBClient, ScanCommand } = require('@aws-sdk/client-dynamodb');
+          const client = new DynamoDBClient();
 
           exports.handler = async (event) => {
               const params = { TableName: 'GTOEmployes' };
               try {
-                  const data = await dynamodb.scan(params).promise();
+                  const data = await client.send(new ScanCommand(params));
                   return {
                       statusCode: 200,
                       body: JSON.stringify(data.Items),
@@ -63,6 +63,7 @@ Resources:
                   };
               }
           };
+
       Role: !GetAtt GTOLambdaExecutionRole.Arn
 
   GTOTrucksLambdaFunction:
@@ -73,13 +74,13 @@ Resources:
       Runtime: nodejs18.x
       Code:
         ZipFile: |
-          const AWS = require('aws-sdk');
-          const dynamodb = new AWS.DynamoDB.DocumentClient();
+          const { DynamoDBClient, ScanCommand } = require('@aws-sdk/client-dynamodb');
+          const client = new DynamoDBClient();
 
           exports.handler = async (event) => {
               const params = { TableName: 'GTOTrucks' };
               try {
-                  const data = await dynamodb.scan(params).promise();
+                  const data = await client.send(new ScanCommand(params));
                   return {
                       statusCode: 200,
                       body: JSON.stringify(data.Items),
@@ -91,6 +92,7 @@ Resources:
                   };
               }
           };
+
       Role: !GetAtt GTOLambdaExecutionRole.Arn
 
   GTODeliveriesLambdaFunction:
@@ -101,13 +103,13 @@ Resources:
       Runtime: nodejs18.x
       Code:
         ZipFile: |
-          const AWS = require('aws-sdk');
-          const dynamodb = new AWS.DynamoDB.DocumentClient();
+          const { DynamoDBClient, ScanCommand } = require('@aws-sdk/client-dynamodb');
+          const client = new DynamoDBClient();
 
           exports.handler = async (event) => {
               const params = { TableName: 'GTODeliveries' };
               try {
-                  const data = await dynamodb.scan(params).promise();
+                  const data = await client.send(new ScanCommand(params));
                   return {
                       statusCode: 200,
                       body: JSON.stringify(data.Items),
