@@ -1,5 +1,5 @@
 Resources:
-  # DynamoDB Tables
+  # DynamoDB Table
   GTOEmployesTable:
     Type: AWS::DynamoDB::Table
     Properties:
