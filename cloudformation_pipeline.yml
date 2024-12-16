@@ -123,77 +123,96 @@ Resources:
           };
       Role: !GetAtt GTOLambdaExecutionRole.Arn
 
-        # Lambda for Adding Data to DynamoDB
   GTODynamoDBSeederLambda:
-    Type: AWS::Lambda::Function
-    Properties:
-      FunctionName: GTOAddDataToDynamoDB
-      Handler: index.handler
-      Runtime: nodejs18.x
-      Code:
-        ZipFile: |
-          const { DynamoDBClient, PutItemCommand } = require('@aws-sdk/client-dynamodb');
-          const client = new DynamoDBClient();
+  Type: AWS::Lambda::Function
+  Properties:
+    FunctionName: GTOAddDataToDynamoDB
+    Handler: index.handler
+    Runtime: nodejs18.x
+    Code:
+      ZipFile: |
+        const { DynamoDBClient, PutItemCommand } = require('@aws-sdk/client-dynamodb');
+        const https = require('https');
+        const url = require('url');
 
-          exports.handler = async (event) => {
-              const employees = [
-                  { EmployeeID: { S: 'E001' }, Name: { S: 'John Doe' }, Position: { S: 'Driver' } },
-                  { EmployeeID: { S: 'E002' }, Name: { S: 'Jane Smith' }, Position: { S: 'Manager' } },
-              ];
+        exports.handler = async (event, context) => {
+            console.log('Event received:', JSON.stringify(event));
+            const responseUrl = event.ResponseURL;
+            const client = new DynamoDBClient();
 
-              const trucks = [
-                  { TruckID: { S: 'T001' }, Model: { S: 'Volvo' }, Capacity: { N: '10' } },
-                  { TruckID: { S: 'T002' }, Model: { S: 'Mercedes' }, Capacity: { N: '12' } },
-              ];
+            const sendResponse = (status, reason = null) => {
+                const responseBody = JSON.stringify({
+                    Status: status,
+                    Reason: reason || 'Execution complete',
+                    PhysicalResourceId: context.logStreamName,
+                    StackId: event.StackId,
+                    RequestId: event.RequestId,
+                    LogicalResourceId: event.LogicalResourceId,
+                });
 
-              const deliveries = [
-                  { DeliveryID: { S: 'D001' }, DeliveryDate: { S: '2024-12-15' }, Status: { S: 'Completed' } },
-                  { DeliveryID: { S: 'D002' }, DeliveryDate: { S: '2024-12-16' }, Status: { S: 'Pending' } },
-              ];
+                const parsedUrl = url.parse(responseUrl);
+                const options = {
+                    hostname: parsedUrl.hostname,
+                    path: parsedUrl.path,
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': '',
+                        'Content-Length': responseBody.length,
+                    },
+                };
 
-              const putRequests = (tableName, items) => {
-                  return items.map(item => {
-                      return {
-                          TableName: tableName,
-                          Item: item
-                      };
-                  });
-              };
+                const req = https.request(options, res => {
+                    console.log('CloudFormation response status:', res.statusCode);
+                });
 
-              try {
-                  const employeePromises = putRequests('GTOEmployes', employees).map(req => client.send(new PutItemCommand(req)));
-                  const truckPromises = putRequests('GTOTrucks', trucks).map(req => client.send(new PutItemCommand(req)));
-                  const deliveryPromises = putRequests('GTODeliveries', deliveries).map(req => client.send(new PutItemCommand(req)));
+                req.on('error', error => {
+                    console.error('Error sending response to CloudFormation:', error);
+                });
 
-                  await Promise.all([...employeePromises, ...truckPromises, ...deliveryPromises]);
+                req.write(responseBody);
+                req.end();
+            };
 
-                  return {
-                      statusCode: 200,
-                      body: JSON.stringify({ message: 'Data inserted successfully' }),
-                  };
-              } catch (error) {
-                  return {
-                      statusCode: 500,
-                      body: JSON.stringify({ error: error.message }),
-                  };
-              }
-          };
+            try {
+                const employees = [
+                    { EmployeeID: { S: 'E001' }, Name: { S: 'John Doe' }, Position: { S: 'Driver' } },
+                    { EmployeeID: { S: 'E002' }, Name: { S: 'Jane Smith' }, Position: { S: 'Manager' } },
+                ];
 
-      Role: !GetAtt GTOLambdaExecutionRole.Arn
+                const trucks = [
+                    { TruckID: { S: 'T001' }, Model: { S: 'Volvo' }, Capacity: { N: '10' } },
+                    { TruckID: { S: 'T002' }, Model: { S: 'Mercedes' }, Capacity: { N: '12' } },
+                ];
 
-  # Custom Resource to Trigger Lambda after Stack Creation
-  GTODynamoDBSeederCustomResource:
-    Type: Custom::DynamoDBSeeder
-    Properties:
-      ServiceToken: !GetAtt GTODynamoDBSeederLambda.Arn
+                const deliveries = [
+                    { DeliveryID: { S: 'D001' }, DeliveryDate: { S: '2024-12-15' }, Status: { S: 'Completed' } },
+                    { DeliveryID: { S: 'D002' }, DeliveryDate: { S: '2024-12-16' }, Status: { S: 'Pending' } },
+                ];
 
-  # Add Permissions to Lambda Function
-  GTODynamoDBSeederLambdaPermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      FunctionName: !Ref GTODynamoDBSeederLambda
-      Action: lambda:InvokeFunction
-      Principal: cloudformation.amazonaws.com
+                const putRequests = (tableName, items) => {
+                    return items.map(item => {
+                        return {
+                            TableName: tableName,
+                            Item: item
+                        };
+                    });
+                };
+
+                const employeePromises = putRequests('GTOEmployes', employees).map(req => client.send(new PutItemCommand(req)));
+                const truckPromises = putRequests('GTOTrucks', trucks).map(req => client.send(new PutItemCommand(req)));
+                const deliveryPromises = putRequests('GTODeliveries', deliveries).map(req => client.send(new PutItemCommand(req)));
+
+                await Promise.all([...employeePromises, ...truckPromises, ...deliveryPromises]);
+
+                console.log('Data inserted successfully.');
+                sendResponse('SUCCESS');
+            } catch (error) {
+                console.error('Error inserting data:', error);
+                sendResponse('FAILED', error.message);
+            }
+        };
+
+    Role: !GetAtt GTOLambdaExecutionRole.Arn
 
 
   GTOLambdaExecutionRole:
