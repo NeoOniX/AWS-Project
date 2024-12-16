@@ -209,7 +209,18 @@ Resources:
         IntegrationHttpMethod: POST
         Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GTODeliveriesLambdaFunction.Arn}/invocations
 
-  #S3 Bucket
+  # Deployment and Stage
+  GTOApiGatewayDeployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn:
+      - GTOEmployesMethod
+      - GTOTrucksMethod
+      - GTODeliveriesMethod
+    Properties:
+      RestApiId: !Ref GTOApiGateway
+      StageName: prod
+
+  # S3 Bucket
   GTOStaticWebsiteBucket:
     Type: AWS::S3::Bucket
     Properties:
@@ -238,6 +249,6 @@ Outputs:
   GTOApiGatewayUrl:
     Value: !Sub 'https://${GTOApiGateway}.execute-api.${AWS::Region}.amazonaws.com/prod'
     Description: URL de l'API Gateway.
-  # GTOS3WebsiteUrl:
-  #   Value: !Sub 'http://${GTOStaticWebsiteBucket}.s3-website-${AWS::Region}.amazonaws.com'
-  #   Description: URL de l'hébergement web statique S3.
+  GTOS3WebsiteUrl:
+    Value: !Sub 'http://${GTOStaticWebsiteBucket}.s3-website-${AWS::Region}.amazonaws.com'
+    Description: URL de l'hébergement web statique S3.
