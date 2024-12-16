@@ -36,7 +36,102 @@ Resources:
           KeyType: HASH
       BillingMode: PAY_PER_REQUEST
 
-  # LambdaFunctions
+  # Lambda Function to Insert Data
+  GTODynamoDBSeederLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: GTODynamoDBSeeder
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Code:
+        ZipFile: |
+          const { DynamoDBClient, PutItemCommand } = require('@aws-sdk/client-dynamodb');
+          const client = new DynamoDBClient();
+
+          exports.handler = async (event) => {
+            const items = [
+              {
+                TableName: 'GTOEmployes',
+                Item: {
+                  EmployeeID: { S: 'EMP001' },
+                  Name: { S: 'John Doe' },
+                  Position: { S: 'Manager' },
+                  Department: { S: 'Logistics' }
+                }
+              },
+              {
+                TableName: 'GTOTrucks',
+                Item: {
+                  TruckID: { S: 'TRUCK001' },
+                  Model: { S: 'Volvo FH' },
+                  Capacity: { N: '20' },
+                  Status: { S: 'Active' }
+                }
+              },
+              {
+                TableName: 'GTODeliveries',
+                Item: {
+                  DeliveryID: { S: 'DEL001' },
+                  TruckID: { S: 'TRUCK001' },
+                  EmployeeID: { S: 'EMP001' },
+                  Destination: { S: 'Warehouse 1' },
+                  Date: { S: '2024-12-16' }
+                }
+              }
+            ];
+
+            try {
+              for (let item of items) {
+                await client.send(new PutItemCommand(item));
+              }
+
+              return {
+                statusCode: 200,
+                body: JSON.stringify({ message: 'Data inserted successfully!' })
+              };
+            } catch (error) {
+              return {
+                statusCode: 500,
+                body: JSON.stringify({ error: error.message })
+              };
+            }
+          };
+      Role: !GetAtt GTOLambdaExecutionRole.Arn
+
+  # Custom Resource to invoke Lambda function after creating DynamoDB tables
+  GTODynamoDBSeederCustomResource:
+    Type: Custom::DynamoDBSeeder
+    Properties:
+      ServiceToken: !GetAtt GTODynamoDBSeederLambdaFunction.Arn
+
+  # Lambda Execution Role (same role used for DynamoDB access)
+  GTOLambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: GTOLambdaDynamoDBExecutionRole
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: GTODynamoDBAccessPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:Scan
+                  - dynamodb:GetItem
+                  - dynamodb:PutItem
+                Resource:
+                  - !GetAtt GTOEmployesTable.Arn
+                  - !GetAtt GTOTrucksTable.Arn
+                  - !GetAtt GTODeliveriesTable.Arn
+
+  # Lambda Functions
   GTOEmployesLambdaFunction:
     Type: AWS::Lambda::Function
     Properties:
@@ -63,7 +158,6 @@ Resources:
                   };
               }
           };
-
       Role: !GetAtt GTOLambdaExecutionRole.Arn
 
   GTOTrucksLambdaFunction:
@@ -92,7 +186,6 @@ Resources:
                   };
               }
           };
-
       Role: !GetAtt GTOLambdaExecutionRole.Arn
 
   GTODeliveriesLambdaFunction:
@@ -122,31 +215,6 @@ Resources:
               }
           };
       Role: !GetAtt GTOLambdaExecutionRole.Arn
-
-  GTOLambdaExecutionRole:
-    Type: AWS::IAM::Role
-    Properties:
-      RoleName: GTOLambdaDynamoDBExecutionRole
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: lambda.amazonaws.com
-            Action: sts:AssumeRole
-      Policies:
-        - PolicyName: GTODynamoDBAccessPolicy
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action:
-                  - dynamodb:Scan
-                  - dynamodb:GetItem
-                Resource: 
-                  - !GetAtt GTOEmployesTable.Arn
-                  - !GetAtt GTOTrucksTable.Arn
-                  - !GetAtt GTODeliveriesTable.Arn
 
   # API Gateway
   GTOApiGateway:
@@ -274,7 +342,7 @@ Resources:
 Outputs:
   GTOApiGatewayUrl:
     Value: !Sub 'https://${GTOApiGateway}.execute-api.${AWS::Region}.amazonaws.com/prod'
-    Description: URL de l'API Gateway.
+    Description: 'The URL of the API Gateway'
   GTOS3WebsiteUrl:
     Value: !Sub 'http://${GTOStaticWebsiteBucket}.s3-website-${AWS::Region}.amazonaws.com'
     Description: URL de l'hébergement web statique S3.
