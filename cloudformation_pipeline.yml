@@ -1,5 +1,5 @@
 Resources:
-  # DynamoDB tables
+  # DynamoDB Tables
   GTOEmployesTable:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -35,6 +35,148 @@ Resources:
         - AttributeName: DeliveryID
           KeyType: HASH
       BillingMode: PAY_PER_REQUEST
+
+       # Rôle IAM pour la Lambda Custom Resource
+  GTOInitDataLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: GTOInitDataLambdaRole
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: GTOInitDataDynamoDBAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:PutItem
+                Resource:
+                  - !GetAtt GTOEmployesTable.Arn
+                  - !GetAtt GTOTrucksTable.Arn
+                  - !GetAtt GTODeliveriesTable.Arn
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: "*"
+
+  # Lambda pour initialiser les données
+  GTOInitDataLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: GTOInitDataFunction
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Role: !GetAtt GTOInitDataLambdaRole.Arn
+      Code:
+        ZipFile: |
+          const { DynamoDBClient, PutItemCommand } = require('@aws-sdk/client-dynamodb');
+          const https = require('https');
+
+          const client = new DynamoDBClient();
+
+          exports.handler = async (event, context) => {
+            console.log('Event:', JSON.stringify(event));
+            
+            if (event.RequestType === 'Delete') {
+              // Pas besoin d’insérer de données en cas de suppression
+              return sendResponse(event, context, 'SUCCESS');
+            }
+
+            try {
+              // Exemple d’insertions (à adapter selon tes données)
+              await client.send(new PutItemCommand({
+                TableName: 'GTOEmployes',
+                Item: {
+                  EmployeeID: { S: 'emp1' },
+                  Name: { S: 'John Doe' },
+                  Role: { S: 'Driver' }
+                }
+              }));
+
+              await client.send(new PutItemCommand({
+                TableName: 'GTOTrucks',
+                Item: {
+                  TruckID: { S: 'truck1' },
+                  Model: { S: 'Volvo FH' },
+                  Status: { S: 'Active' }
+                }
+              }));
+
+              await client.send(new PutItemCommand({
+                TableName: 'GTODeliveries',
+                Item: {
+                  DeliveryID: { S: 'del1' },
+                  Destination: { S: '123 Main St' },
+                  Status: { S: 'Pending' }
+                }
+              }));
+
+              return sendResponse(event, context, 'SUCCESS');
+            } catch (error) {
+              console.error(error);
+              return sendResponse(event, context, 'FAILED');
+            }
+          };
+
+          function sendResponse(event, context, responseStatus) {
+            const responseBody = JSON.stringify({
+              Status: responseStatus,
+              Reason: `See the details in CloudWatch Log Stream: ${context.logStreamName}`,
+              PhysicalResourceId: context.logStreamName,
+              StackId: event.StackId,
+              RequestId: event.RequestId,
+              LogicalResourceId: event.LogicalResourceId,
+              Data: {}
+            });
+
+            console.log('RESPONSE BODY:\n', responseBody);
+
+            const parsedUrl = new URL(event.ResponseURL);
+            const options = {
+              hostname: parsedUrl.hostname,
+              port: 443,
+              path: parsedUrl.pathname + parsedUrl.search,
+              method: 'PUT',
+              headers: {
+                'Content-Type': '',
+                'Content-Length': Buffer.byteLength(responseBody)
+              }
+            };
+
+            return new Promise((resolve, reject) => {
+              const req = https.request(options, (res) => {
+                console.log('Status code:', res.statusCode);
+                console.log('Status message:', res.statusMessage);
+                resolve();
+              });
+
+              req.on('error', (error) => {
+                console.error('sendResponse Error:', error);
+                reject();
+              });
+
+              req.write(responseBody);
+              req.end();
+            });
+          }
+
+  # Custom Resource
+  GTOInitDataCustomResource:
+    Type: AWS::CloudFormation::CustomResource
+    Properties:
+      ServiceToken: !GetAtt GTOInitDataLambda.Arn
+    DependsOn: 
+      - GTOEmployesTable
+      - GTOTrucksTable
+      - GTODeliveriesTable
 
   # LambdaFunctions
   GTOEmployesLambdaFunction:
@@ -122,98 +264,6 @@ Resources:
               }
           };
       Role: !GetAtt GTOLambdaExecutionRole.Arn
-
-  GTODynamoDBSeederLambda:
-  Type: AWS::Lambda::Function
-  Properties:
-    FunctionName: GTOAddDataToDynamoDB
-    Handler: index.handler
-    Runtime: nodejs18.x
-    Code:
-      ZipFile: |
-        const { DynamoDBClient, PutItemCommand } = require('@aws-sdk/client-dynamodb');
-        const https = require('https');
-        const url = require('url');
-
-        exports.handler = async (event, context) => {
-            console.log('Event received:', JSON.stringify(event));
-            const responseUrl = event.ResponseURL;
-            const client = new DynamoDBClient();
-
-            const sendResponse = (status, reason = null) => {
-                const responseBody = JSON.stringify({
-                    Status: status,
-                    Reason: reason || 'Execution complete',
-                    PhysicalResourceId: context.logStreamName,
-                    StackId: event.StackId,
-                    RequestId: event.RequestId,
-                    LogicalResourceId: event.LogicalResourceId,
-                });
-
-                const parsedUrl = url.parse(responseUrl);
-                const options = {
-                    hostname: parsedUrl.hostname,
-                    path: parsedUrl.path,
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': '',
-                        'Content-Length': responseBody.length,
-                    },
-                };
-
-                const req = https.request(options, res => {
-                    console.log('CloudFormation response status:', res.statusCode);
-                });
-
-                req.on('error', error => {
-                    console.error('Error sending response to CloudFormation:', error);
-                });
-
-                req.write(responseBody);
-                req.end();
-            };
-
-            try {
-                const employees = [
-                    { EmployeeID: { S: 'E001' }, Name: { S: 'John Doe' }, Position: { S: 'Driver' } },
-                    { EmployeeID: { S: 'E002' }, Name: { S: 'Jane Smith' }, Position: { S: 'Manager' } },
-                ];
-
-                const trucks = [
-                    { TruckID: { S: 'T001' }, Model: { S: 'Volvo' }, Capacity: { N: '10' } },
-                    { TruckID: { S: 'T002' }, Model: { S: 'Mercedes' }, Capacity: { N: '12' } },
-                ];
-
-                const deliveries = [
-                    { DeliveryID: { S: 'D001' }, DeliveryDate: { S: '2024-12-15' }, Status: { S: 'Completed' } },
-                    { DeliveryID: { S: 'D002' }, DeliveryDate: { S: '2024-12-16' }, Status: { S: 'Pending' } },
-                ];
-
-                const putRequests = (tableName, items) => {
-                    return items.map(item => {
-                        return {
-                            TableName: tableName,
-                            Item: item
-                        };
-                    });
-                };
-
-                const employeePromises = putRequests('GTOEmployes', employees).map(req => client.send(new PutItemCommand(req)));
-                const truckPromises = putRequests('GTOTrucks', trucks).map(req => client.send(new PutItemCommand(req)));
-                const deliveryPromises = putRequests('GTODeliveries', deliveries).map(req => client.send(new PutItemCommand(req)));
-
-                await Promise.all([...employeePromises, ...truckPromises, ...deliveryPromises]);
-
-                console.log('Data inserted successfully.');
-                sendResponse('SUCCESS');
-            } catch (error) {
-                console.error('Error inserting data:', error);
-                sendResponse('FAILED', error.message);
-            }
-        };
-
-    Role: !GetAtt GTOLambdaExecutionRole.Arn
-
 
   GTOLambdaExecutionRole:
     Type: AWS::IAM::Role
