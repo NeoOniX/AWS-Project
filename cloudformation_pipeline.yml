@@ -165,6 +165,7 @@ Resources:
       HttpMethod: GET
       ResourceId: !Ref GTOEmployesResource
       RestApiId: !Ref GTOApiGateway
+      AuthorizationType: NONE
       Integration:
         Type: AWS_PROXY
         IntegrationHttpMethod: POST
@@ -183,6 +184,7 @@ Resources:
       HttpMethod: GET
       ResourceId: !Ref GTOTrucksResource
       RestApiId: !Ref GTOApiGateway
+      AuthorizationType: NONE
       Integration:
         Type: AWS_PROXY
         IntegrationHttpMethod: POST
@@ -201,6 +203,7 @@ Resources:
       HttpMethod: GET
       ResourceId: !Ref GTODeliveriesResource
       RestApiId: !Ref GTOApiGateway
+      AuthorizationType: NONE
       Integration:
         Type: AWS_PROXY
         IntegrationHttpMethod: POST
