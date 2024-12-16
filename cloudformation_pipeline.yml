@@ -1,9 +1,9 @@
 Resources:
   # DynamoDB tables
-  GTOEmployesTable:
+  GTEmployesTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: GTOEmployes
+      TableName: GTEmployes
       AttributeDefinitions:
         - AttributeName: EmployeeID
           AttributeType: S
@@ -12,10 +12,10 @@ Resources:
           KeyType: HASH
       BillingMode: PAY_PER_REQUEST
 
-  GTOTrucksTable:
+  GTTrucksTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: GTOTrucks
+      TableName: GTTrucks
       AttributeDefinitions:
         - AttributeName: TruckID
           AttributeType: S
@@ -24,10 +24,10 @@ Resources:
           KeyType: HASH
       BillingMode: PAY_PER_REQUEST
 
-  GTODeliveriesTable:
+  GTDeliveriesTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: GTODeliveries
+      TableName: GTDeliveries
       AttributeDefinitions:
         - AttributeName: DeliveryID
           AttributeType: S
@@ -37,10 +37,10 @@ Resources:
       BillingMode: PAY_PER_REQUEST
 
   # LambdaFunctions
-  GTOEmployesLambdaFunction:
+  GTEmployesLambdaFunction:
     Type: AWS::Lambda::Function
     Properties:
-      FunctionName: GTOGetEmployes
+      FunctionName: GTGetEmployes
       Handler: index.handler
       Runtime: nodejs18.x
       Code:
@@ -49,7 +49,7 @@ Resources:
           const client = new DynamoDBClient();
 
           exports.handler = async (event) => {
-              const params = { TableName: 'GTOEmployes' };
+              const params = { TableName: 'GTEmployes' };
               try {
                   const data = await client.send(new ScanCommand(params));
                   return {
@@ -64,12 +64,12 @@ Resources:
               }
           };
 
-      Role: !GetAtt GTOLambdaExecutionRole.Arn
+      Role: !GetAtt GTLambdaExecutionRole.Arn
 
-  GTOTrucksLambdaFunction:
+  GTTrucksLambdaFunction:
     Type: AWS::Lambda::Function
     Properties:
-      FunctionName: GTOGetTrucks
+      FunctionName: GTGetTrucks
       Handler: index.handler
       Runtime: nodejs18.x
       Code:
@@ -78,7 +78,7 @@ Resources:
           const client = new DynamoDBClient();
 
           exports.handler = async (event) => {
-              const params = { TableName: 'GTOTrucks' };
+              const params = { TableName: 'GTTrucks' };
               try {
                   const data = await client.send(new ScanCommand(params));
                   return {
@@ -93,12 +93,12 @@ Resources:
               }
           };
 
-      Role: !GetAtt GTOLambdaExecutionRole.Arn
+      Role: !GetAtt GTLambdaExecutionRole.Arn
 
-  GTODeliveriesLambdaFunction:
+  GTDeliveriesLambdaFunction:
     Type: AWS::Lambda::Function
     Properties:
-      FunctionName: GTOGetDeliveries
+      FunctionName: GTGetDeliveries
       Handler: index.handler
       Runtime: nodejs18.x
       Code:
@@ -107,7 +107,7 @@ Resources:
           const client = new DynamoDBClient();
 
           exports.handler = async (event) => {
-              const params = { TableName: 'GTODeliveries' };
+              const params = { TableName: 'GTDeliveries' };
               try {
                   const data = await client.send(new ScanCommand(params));
                   return {
@@ -121,12 +121,12 @@ Resources:
                   };
               }
           };
-      Role: !GetAtt GTOLambdaExecutionRole.Arn
+      Role: !GetAtt GTLambdaExecutionRole.Arn
 
-  GTOLambdaExecutionRole:
+  GTLambdaExecutionRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: GTOLambdaDynamoDBExecutionRole
+      RoleName: GTLambdaDynamoDBExecutionRole
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -135,7 +135,7 @@ Resources:
               Service: lambda.amazonaws.com
             Action: sts:AssumeRole
       Policies:
-        - PolicyName: GTODynamoDBAccessPolicy
+        - PolicyName: GTDynamoDBAccessPolicy
           PolicyDocument:
             Version: '2012-10-17'
             Statement:
@@ -144,121 +144,121 @@ Resources:
                   - dynamodb:Scan
                   - dynamodb:GetItem
                 Resource: 
-                  - !GetAtt GTOEmployesTable.Arn
-                  - !GetAtt GTOTrucksTable.Arn
-                  - !GetAtt GTODeliveriesTable.Arn
+                  - !GetAtt GTEmployesTable.Arn
+                  - !GetAtt GTTrucksTable.Arn
+                  - !GetAtt GTDeliveriesTable.Arn
 
   # API Gateway
-  GTOApiGateway:
+  GTApiGateway:
     Type: AWS::ApiGateway::RestApi
     Properties:
-      Name: GTOCompanyApi
+      Name: GTCompanyApi
 
-  GTOEmployesResource:
+  GTEmployesResource:
     Type: AWS::ApiGateway::Resource
     Properties:
-      ParentId: !GetAtt GTOApiGateway.RootResourceId
+      ParentId: !GetAtt GTApiGateway.RootResourceId
       PathPart: employes
-      RestApiId: !Ref GTOApiGateway
+      RestApiId: !Ref GTApiGateway
 
-  GTOEmployesMethod:
+  GTEmployesMethod:
     Type: AWS::ApiGateway::Method
     Properties:
       HttpMethod: GET
-      ResourceId: !Ref GTOEmployesResource
-      RestApiId: !Ref GTOApiGateway
+      ResourceId: !Ref GTEmployesResource
+      RestApiId: !Ref GTApiGateway
       AuthorizationType: NONE
       Integration:
         Type: AWS_PROXY
         IntegrationHttpMethod: POST
-        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GTOEmployesLambdaFunction.Arn}/invocations
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GTEmployesLambdaFunction.Arn}/invocations
 
-  GTOEmployesLambdaPermission:
+  GTEmployesLambdaPermission:
     Type: AWS::Lambda::Permission
     Properties:
-      FunctionName: !Ref GTOEmployesLambdaFunction
+      FunctionName: !Ref GTEmployesLambdaFunction
       Action: lambda:InvokeFunction
       Principal: apigateway.amazonaws.com
-      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${GTOApiGateway}/*
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${GTApiGateway}/*
 
-  GTOTrucksResource:
+  GTTrucksResource:
     Type: AWS::ApiGateway::Resource
     Properties:
-      ParentId: !GetAtt GTOApiGateway.RootResourceId
+      ParentId: !GetAtt GTApiGateway.RootResourceId
       PathPart: trucks
-      RestApiId: !Ref GTOApiGateway
+      RestApiId: !Ref GTApiGateway
 
-  GTOTrucksMethod:
+  GTTrucksMethod:
     Type: AWS::ApiGateway::Method
     Properties:
       HttpMethod: GET
-      ResourceId: !Ref GTOTrucksResource
-      RestApiId: !Ref GTOApiGateway
+      ResourceId: !Ref GTTrucksResource
+      RestApiId: !Ref GTApiGateway
       AuthorizationType: NONE
       Integration:
         Type: AWS_PROXY
         IntegrationHttpMethod: POST
-        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GTOTrucksLambdaFunction.Arn}/invocations
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GTTrucksLambdaFunction.Arn}/invocations
 
-  GTOTrucksLambdaPermission:
+  GTTrucksLambdaPermission:
     Type: AWS::Lambda::Permission
     Properties:
-      FunctionName: !Ref GTOTrucksLambdaFunction
+      FunctionName: !Ref GTTrucksLambdaFunction
       Action: lambda:InvokeFunction
       Principal: apigateway.amazonaws.com
-      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${GTOApiGateway}/*
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${GTApiGateway}/*
 
-  GTODeliveriesResource:
+  GTDeliveriesResource:
     Type: AWS::ApiGateway::Resource
     Properties:
-      ParentId: !GetAtt GTOApiGateway.RootResourceId
+      ParentId: !GetAtt GTApiGateway.RootResourceId
       PathPart: deliveries
-      RestApiId: !Ref GTOApiGateway
+      RestApiId: !Ref GTApiGateway
 
-  GTODeliveriesMethod:
+  GTDeliveriesMethod:
     Type: AWS::ApiGateway::Method
     Properties:
       HttpMethod: GET
-      ResourceId: !Ref GTODeliveriesResource
-      RestApiId: !Ref GTOApiGateway
+      ResourceId: !Ref GTDeliveriesResource
+      RestApiId: !Ref GTApiGateway
       AuthorizationType: NONE
       Integration:
         Type: AWS_PROXY
         IntegrationHttpMethod: POST
-        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GTODeliveriesLambdaFunction.Arn}/invocations
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GTDeliveriesLambdaFunction.Arn}/invocations
 
-  GTODeliveriesLambdaPermission:
+  GTDeliveriesLambdaPermission:
     Type: AWS::Lambda::Permission
     Properties:
-      FunctionName: !Ref GTODeliveriesLambdaFunction
+      FunctionName: !Ref GTDeliveriesLambdaFunction
       Action: lambda:InvokeFunction
       Principal: apigateway.amazonaws.com
-      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${GTOApiGateway}/*
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${GTApiGateway}/*
 
   # Deployment and Stage
-  GTOApiGatewayDeployment:
+  GTApiGatewayDeployment:
     Type: AWS::ApiGateway::Deployment
     DependsOn:
-      - GTOEmployesMethod
-      - GTOTrucksMethod
-      - GTODeliveriesMethod
+      - GTEmployesMethod
+      - GTTrucksMethod
+      - GTDeliveriesMethod
     Properties:
-      RestApiId: !Ref GTOApiGateway
+      RestApiId: !Ref GTApiGateway
       StageName: prod
 
   # S3 Bucket
-  GTOStaticWebsiteBucket:
+  GTStaticWebsiteBucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: gto-static-website-bucket
+      BucketName: GT-static-website-bucket
       WebsiteConfiguration:
         IndexDocument: index.html
         ErrorDocument: error.html
 
-  GTOStaticWebsiteBucketPolicy:
+  GTStaticWebsiteBucketPolicy:
     Type: AWS::S3::BucketPolicy
     Properties:
-      Bucket: !Ref GTOStaticWebsiteBucket
+      Bucket: !Ref GTStaticWebsiteBucket
       PolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -269,12 +269,12 @@ Resources:
             Action:
              - s3:GetObject
              - s3:PutObjectAcl
-            Resource: !Sub '${GTOStaticWebsiteBucket.Arn}/*'
+            Resource: !Sub '${GTStaticWebsiteBucket.Arn}/*'
 
 Outputs:
-  GTOApiGatewayUrl:
-    Value: !Sub 'https://${GTOApiGateway}.execute-api.${AWS::Region}.amazonaws.com/prod'
+  GTApiGatewayUrl:
+    Value: !Sub 'https://${GTApiGateway}.execute-api.${AWS::Region}.amazonaws.com/prod'
     Description: URL de l'API Gateway.
-  GTOS3WebsiteUrl:
-    Value: !Sub 'http://${GTOStaticWebsiteBucket}.s3-website-${AWS::Region}.amazonaws.com'
+  GTS3WebsiteUrl:
+    Value: !Sub 'http://${GTStaticWebsiteBucket}.s3-website-${AWS::Region}.amazonaws.com'
     Description: URL de l'hébergement web statique S3.
