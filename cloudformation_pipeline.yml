@@ -1,5 +1,5 @@
 Resources:
-  # DynamoDB Tables
+  # DynamoDB tables
   GTEmployesTable:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -36,7 +36,7 @@ Resources:
           KeyType: HASH
       BillingMode: PAY_PER_REQUEST
 
-  # LambdaFunction
+  # LambdaFunctions
   GTEmployesLambdaFunction:
     Type: AWS::Lambda::Function
     Properties:
@@ -123,71 +123,6 @@ Resources:
           };
       Role: !GetAtt GTLambdaExecutionRole.Arn
 
-  GTAddDataLambdaFunction:
-    Type: AWS::Lambda::Function
-    Properties:
-      FunctionName: GTAddData
-      Handler: index.handler
-      Runtime: nodejs18.x
-      Code:
-        ZipFile: |
-          import pkg from '@aws-sdk/client-dynamodb';
-          import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
-
-          const { DynamoDBClient } = pkg;
-
-          const dynamoDBClient = new DynamoDBClient({ region: "eu-central-1" });
-          const dynamoDB = DynamoDBDocumentClient.from(dynamoDBClient);
-
-          const deliveriesData = [
-              { DeliveryID: '1', deliveryDate: '2024-12-16', destination: 'Paris', status: 'Completed' },
-              { DeliveryID: '2', deliveryDate: '2024-12-16', destination: 'Lyon', status: 'Pending' }
-          ];
-
-          const trucksData = [
-              { TruckID: 'T1', model: 'Volvo', capacity: 20, status: 'Active' },
-              { TruckID: 'T2', model: 'Scania', capacity: 25, status: 'Inactive' }
-          ];
-
-          const employeesData = [
-              { EmployeeID: 'E1', name: 'John Doe', position: 'Driver', status: 'Active' },
-              { EmployeeID: 'E2', name: 'Jane Smith', position: 'Mechanic', status: 'Active' }
-          ];
-
-          export const handler = async () => {
-              try {
-                  const promises = [
-                      putItem("GTDeliveries", deliveriesData),
-                      putItem("GTTrucks", trucksData),
-                      putItem("GTEmployes", employeesData),
-                  ];
-                  await Promise.all(promises);
-
-                  return {
-                      statusCode: 200,
-                      body: JSON.stringify({ message: "Data added successfully to all tables" }),
-                  };
-              } catch (error) {
-                  console.error("Error adding data to tables:", error);
-                  return {
-                      statusCode: 500,
-                      body: JSON.stringify({ message: "Failed to add data", error: error.message }),
-                  };
-              }
-          };
-
-          async function putItem(tableName, data) {
-              const promises = data.map(item => {
-                  const params = {
-                      TableName: tableName,
-                      Item: item,
-                  };
-                  return dynamoDB.send(new PutCommand(params));
-              });
-              await Promise.all(promises);
-          }
-      Role: !GetAtt GTLambdaExecutionRole.Arn
-
   GTLambdaExecutionRole:
     Type: AWS::IAM::Role
     Properties:
@@ -208,7 +143,6 @@ Resources:
                 Action:
                   - dynamodb:Scan
                   - dynamodb:GetItem
-                  - dynamodb:PutItem
                 Resource: 
                   - !GetAtt GTEmployesTable.Arn
                   - !GetAtt GTTrucksTable.Arn
@@ -300,39 +234,11 @@ Resources:
       Action: lambda:InvokeFunction
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${GTApiGateway}/*
-  
-  GTDataResource:
-    Type: AWS::ApiGateway::Resource
-    Properties:
-      ParentId: !GetAtt GTApiGateway.RootResourceId
-      PathPart: data
-      RestApiId: !Ref GTApiGateway
 
-  GTDataMethod:
-    Type: AWS::ApiGateway::Method
-    Properties:
-      HttpMethod: POST
-      ResourceId: !Ref GTDataResource
-      RestApiId: !Ref GTApiGateway
-      AuthorizationType: NONE
-      Integration:
-        Type: AWS_PROXY
-        IntegrationHttpMethod: POST
-        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GTAddDataLambdaFunction.Arn}/invocations
-  
-  GTAddDataLambdaPermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      FunctionName: !Ref GTAddDataLambdaFunction
-      Action: lambda:InvokeFunction
-      Principal: apigateway.amazonaws.com
-      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${GTApiGateway}/*
-
-  # Deployment and Stages
+  # Deployment and Stage
   GTApiGatewayDeployment:
     Type: AWS::ApiGateway::Deployment
     DependsOn:
-      - GTDataMethod
       - GTEmployesMethod
       - GTTrucksMethod
       - GTDeliveriesMethod
