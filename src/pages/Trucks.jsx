@@ -12,10 +12,10 @@ export default function Trucks() {
   return (
     <div className="px-4 py-2 flex flex-col">
       {trucks.map((truck, index) => (
-        <div key={index} className="p-4 my-2 bg-gray-100 rounded-md">
+        <a href={`/trucks/${truck.TruckID.S}`} key={index} className="p-4 my-2 bg-gray-100 rounded-md">
           <h2 className="text-xl font-bold">Modèle : {truck.model.S}</h2>
           <p className="text-gray-600">Capacité : {truck.capacity.N}m³</p>
-        </div>
+        </a>
       ))}
     </div>
   )
