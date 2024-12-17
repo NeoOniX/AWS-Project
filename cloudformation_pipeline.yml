@@ -365,7 +365,6 @@ Resources:
               AWS: "arn:aws:iam::719862224486:root"
             Action:
              - s3:GetObject
-             - s3:PutObjectAcl
             Resource: !Sub '${GTStaticWebsiteBucket.Arn}/*'
 
 Outputs:
