@@ -124,72 +124,69 @@ Resources:
       Role: !GetAtt GTLambdaExecutionRole.Arn
 
   GTAddDataLambdaFunction:
-  Type: AWS::Lambda::Function
-  Properties:
-    FunctionName: GTAddData
-    Handler: index.handler
-    Runtime: nodejs18.x
-    Code:
-      ZipFile: |
-        import pkg from '@aws-sdk/client-dynamodb';
-        import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: GTAddData
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Code:
+        ZipFile: |
+          import pkg from '@aws-sdk/client-dynamodb';
+          import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
 
-        const { DynamoDBClient } = pkg;
+          const { DynamoDBClient } = pkg;
 
-        const dynamoDBClient = new DynamoDBClient({ region: "eu-central-1" });
-        const dynamoDB = DynamoDBDocumentClient.from(dynamoDBClient);
+          const dynamoDBClient = new DynamoDBClient({ region: "eu-central-1" });
+          const dynamoDB = DynamoDBDocumentClient.from(dynamoDBClient);
 
-        const deliveriesData = [
-            { DeliveryID: '1', deliveryDate: '2024-12-16', destination: 'Paris', status: 'Completed' },
-            { DeliveryID: '2', deliveryDate: '2024-12-16', destination: 'Lyon', status: 'Pending' }
-        ];
+          const deliveriesData = [
+              { DeliveryID: '1', deliveryDate: '2024-12-16', destination: 'Paris', status: 'Completed' },
+              { DeliveryID: '2', deliveryDate: '2024-12-16', destination: 'Lyon', status: 'Pending' }
+          ];
 
-        const trucksData = [
-            { TruckID: 'T1', model: 'Volvo', capacity: 20, status: 'Active' },
-            { TruckID: 'T2', model: 'Scania', capacity: 25, status: 'Inactive' }
-        ];
+          const trucksData = [
+              { TruckID: 'T1', model: 'Volvo', capacity: 20, status: 'Active' },
+              { TruckID: 'T2', model: 'Scania', capacity: 25, status: 'Inactive' }
+          ];
 
-        const employeesData = [
-            { EmployeeID: 'E1', name: 'John Doe', position: 'Driver', status: 'Active' },
-            { EmployeeID: 'E2', name: 'Jane Smith', position: 'Mechanic', status: 'Active' }
-        ];
+          const employeesData = [
+              { EmployeeID: 'E1', name: 'John Doe', position: 'Driver', status: 'Active' },
+              { EmployeeID: 'E2', name: 'Jane Smith', position: 'Mechanic', status: 'Active' }
+          ];
 
-        export const handler = async () => {
-            try {
-                const promises = [
-                    putItem("GTDeliveries", deliveriesData),
-                    putItem("GTTrucks", trucksData),
-                    putItem("GTEmployes", employeesData),
-                ];
-                await Promise.all(promises);
+          export const handler = async () => {
+              try {
+                  const promises = [
+                      putItem("GTDeliveries", deliveriesData),
+                      putItem("GTTrucks", trucksData),
+                      putItem("GTEmployes", employeesData),
+                  ];
+                  await Promise.all(promises);
 
-                return {
-                    statusCode: 200,
-                    body: JSON.stringify({ message: "Data added successfully to all tables" }),
-                };
-            } catch (error) {
-                console.error("Error adding data to tables:", error);
-                return {
-                    statusCode: 500,
-                    body: JSON.stringify({ message: "Failed to add data", error: error.message }),
-                };
-            }
-        };
+                  return {
+                      statusCode: 200,
+                      body: JSON.stringify({ message: "Data added successfully to all tables" }),
+                  };
+              } catch (error) {
+                  console.error("Error adding data to tables:", error);
+                  return {
+                      statusCode: 500,
+                      body: JSON.stringify({ message: "Failed to add data", error: error.message }),
+                  };
+              }
+          };
 
-        async function putItem(tableName, data) {
-            const promises = data.map(item => {
-                const params = {
-                    TableName: tableName,
-                    Item: item,
-                };
-                return dynamoDB.send(new PutCommand(params));
-            });
-            await Promise.all(promises);
-        }
-
-    Role: !GetAtt GTLambdaExecutionRole.Arn
-
-
+          async function putItem(tableName, data) {
+              const promises = data.map(item => {
+                  const params = {
+                      TableName: tableName,
+                      Item: item,
+                  };
+                  return dynamoDB.send(new PutCommand(params));
+              });
+              await Promise.all(promises);
+          }
+      Role: !GetAtt GTLambdaExecutionRole.Arn
 
   GTLambdaExecutionRole:
     Type: AWS::IAM::Role
