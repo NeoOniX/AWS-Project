@@ -346,6 +346,11 @@ Resources:
       WebsiteConfiguration:
         IndexDocument: index.html
         ErrorDocument: error.html
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: false
+        IgnorePublicAcls: false
+        BlockPublicPolicy: false
+        RestrictPublicBuckets: false
 
   GTStaticWebsiteBucketPolicy:
     Type: AWS::S3::BucketPolicy
@@ -356,11 +361,11 @@ Resources:
         Statement:
           - Sid: PublicReadGetObject
             Effect: Allow
-            Principal: 
-              AWS: "arn:aws:iam::719862224486:root"
+            Principal: "*"
             Action:
              - s3:GetObject
              - s3:PutObjectAcl
+             - s3:PutObject
             Resource: !Sub '${GTStaticWebsiteBucket.Arn}/*'
 
 Outputs:
