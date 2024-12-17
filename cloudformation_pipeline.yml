@@ -207,6 +207,14 @@ Resources:
         Type: AWS_PROXY
         IntegrationHttpMethod: POST
         Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GTAddDataLambdaFunction.Arn}/invocations
+  
+  GTAddDataLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref GTAddDataLambdaFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${GTApiGateway}/*
 
   GTLambdaExecutionRole:
     Type: AWS::IAM::Role
@@ -228,6 +236,7 @@ Resources:
                 Action:
                   - dynamodb:Scan
                   - dynamodb:GetItem
+                  - dynamodb:PutItem
                 Resource: 
                   - !GetAtt GTEmployesTable.Arn
                   - !GetAtt GTTrucksTable.Arn
