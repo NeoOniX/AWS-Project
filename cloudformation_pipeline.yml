@@ -1,5 +1,5 @@
 Resources:
-  # DynamoDB tables
+  # DynamoDB Tables
   GTEmployesTable:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -246,69 +246,6 @@ Resources:
       RestApiId: !Ref GTApiGateway
       StageName: prod
 
-    # Lambda Function
-  GTLambdaInvoker:
-    Type: AWS::Lambda::Function
-    Properties:
-      FunctionName: GTLambdaInvoker
-      Handler: index.handler
-      Runtime: nodejs18.x
-      Code:
-        ZipFile: |
-          const { DynamoDBClient, PutCommand } = require('@aws-sdk/client-dynamodb');
-          const { DynamoDBDocumentClient } = require('@aws-sdk/lib-dynamodb');
-          
-          const dynamoDBClient = new DynamoDBClient({ region: "eu-central-1" });
-          const dynamoDB = DynamoDBDocumentClient.from(dynamoDBClient);
-
-          exports.handler = async (event) => {
-              const deliveriesData = [
-                  { DeliveryID: '1', deliveryDate: '2024-12-16', destination: 'Paris', status: 'Completed' },
-                  { DeliveryID: '2', deliveryDate: '2024-12-16', destination: 'Lyon', status: 'Pending' }
-              ];
-
-              const trucksData = [
-                  { TruckID: 'T1', model: 'Volvo', capacity: 20, status: 'Active' },
-                  { TruckID: 'T2', model: 'Scania', capacity: 25, status: 'Inactive' }
-              ];
-
-              const employeesData = [
-                  { EmployeeID: 'E1', name: 'John Doe', position: 'Driver', status: 'Active' },
-                  { EmployeeID: 'E2', name: 'Jane Smith', position: 'Mechanic', status: 'Active' }
-              ];
-
-              const putItem = async (tableName, data) => {
-                  const promises = data.map(item => {
-                      const params = {
-                          TableName: tableName,
-                          Item: item,
-                      };
-                      return dynamoDB.send(new PutCommand(params));
-                  });
-                  await Promise.all(promises);
-              };
-
-              try {
-                  await Promise.all([
-                      putItem("GTDeliveries", deliveriesData),
-                      putItem("GTTrucks", trucksData),
-                      putItem("GTEmployes", employeesData),
-                  ]);
-                  return { statusCode: 200, body: JSON.stringify({ message: "Data inserted successfully" }) };
-              } catch (error) {
-                  return { statusCode: 500, body: JSON.stringify({ message: "Error inserting data", error: error.message }) };
-              }
-          };
-      Role: !GetAtt GTLambdaExecutionRole.Arn
-
-  GTLambdaInvokeCustom:
-    Type: Custom::InvokeLambda
-    Properties:
-      ServiceToken: !GetAtt GTLambdaInvoker.Arn
-
-      
-  
-
   # S3 Bucket
   GTStaticWebsiteBucket:
     Type: AWS::S3::Bucket
@@ -341,5 +278,3 @@ Outputs:
   GTS3WebsiteUrl:
     Value: !Sub 'http://${GTStaticWebsiteBucket}.s3-website-${AWS::Region}.amazonaws.com'
     Description: URL de l'hébergement web statique S3.
-  GTLambdaInvokerInvoke:
-        Value: !Ref GTLambdaInvokeCustom
