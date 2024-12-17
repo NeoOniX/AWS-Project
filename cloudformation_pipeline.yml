@@ -36,7 +36,7 @@ Resources:
           KeyType: HASH
       BillingMode: PAY_PER_REQUEST
 
-  # LambdaFunctions
+  # LambdaFunction
   GTEmployesLambdaFunction:
     Type: AWS::Lambda::Function
     Properties:
@@ -311,13 +311,13 @@ Resources:
   GTDataMethod:
     Type: AWS::ApiGateway::Method
     Properties:
-      HttpMethod: PUT
+      HttpMethod: POST
       ResourceId: !Ref GTDataResource
       RestApiId: !Ref GTApiGateway
       AuthorizationType: NONE
       Integration:
         Type: AWS_PROXY
-        IntegrationHttpMethod: PUT
+        IntegrationHttpMethod: POST
         Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GTAddDataLambdaFunction.Arn}/invocations
   
   GTAddDataLambdaPermission:
