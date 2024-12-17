@@ -311,7 +311,7 @@ Resources:
   GTDataMethod:
     Type: AWS::ApiGateway::Method
     Properties:
-      HttpMethod: PUT
+      HttpMethod: POST
       ResourceId: !Ref GTDataResource
       RestApiId: !Ref GTApiGateway
       AuthorizationType: NONE
