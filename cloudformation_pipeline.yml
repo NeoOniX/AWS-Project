@@ -189,32 +189,7 @@ Resources:
 
     Role: !GetAtt GTLambdaExecutionRole.Arn
 
-  GTDataResource:
-    Type: AWS::ApiGateway::Resource
-    Properties:
-      ParentId: !GetAtt GTApiGateway.RootResourceId
-      PathPart: data
-      RestApiId: !Ref GTApiGateway
 
-  GTDataMethod:
-    Type: AWS::ApiGateway::Method
-    Properties:
-      HttpMethod: POST
-      ResourceId: !Ref GTDataResource
-      RestApiId: !Ref GTApiGateway
-      AuthorizationType: NONE
-      Integration:
-        Type: AWS_PROXY
-        IntegrationHttpMethod: POST
-        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GTAddDataLambdaFunction.Arn}/invocations
-  
-  GTAddDataLambdaPermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      FunctionName: !Ref GTAddDataLambdaFunction
-      Action: lambda:InvokeFunction
-      Principal: apigateway.amazonaws.com
-      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${GTApiGateway}/*
 
   GTLambdaExecutionRole:
     Type: AWS::IAM::Role
@@ -325,6 +300,33 @@ Resources:
     Type: AWS::Lambda::Permission
     Properties:
       FunctionName: !Ref GTDeliveriesLambdaFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${GTApiGateway}/*
+  
+    GTDataResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      ParentId: !GetAtt GTApiGateway.RootResourceId
+      PathPart: data
+      RestApiId: !Ref GTApiGateway
+
+  GTDataMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      HttpMethod: POST
+      ResourceId: !Ref GTDataResource
+      RestApiId: !Ref GTApiGateway
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GTAddDataLambdaFunction.Arn}/invocations
+  
+  GTAddDataLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref GTAddDataLambdaFunction
       Action: lambda:InvokeFunction
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${GTApiGateway}/*
