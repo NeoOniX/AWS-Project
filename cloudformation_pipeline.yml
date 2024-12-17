@@ -131,10 +131,8 @@ Resources:
       Runtime: nodejs18.x
       Code:
         ZipFile: |
-          import pkg from '@aws-sdk/client-dynamodb';
-          import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
-
-          const { DynamoDBClient } = pkg;
+          const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
+          const { DynamoDBDocumentClient, PutCommand } = require('@aws-sdk/lib-dynamodb');
 
           const dynamoDBClient = new DynamoDBClient({ region: "eu-central-1" });
           const dynamoDB = DynamoDBDocumentClient.from(dynamoDBClient);
@@ -154,7 +152,7 @@ Resources:
               { EmployeeID: 'E2', name: 'Jane Smith', position: 'Mechanic', status: 'Active' }
           ];
 
-          export const handler = async () => {
+          exports.handler = async () => {
               try {
                   const promises = [
                       putItem("GTDeliveries", deliveriesData),
