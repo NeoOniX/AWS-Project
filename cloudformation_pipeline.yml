@@ -54,11 +54,19 @@ Resources:
                   const data = await client.send(new ScanCommand(params));
                   return {
                       statusCode: 200,
+                      headers: {
+                        "Access-Control-Allow-Origin" : "*", // Required for CORS support to work
+                        "Access-Control-Allow-Credentials" : true // Required for cookies, authorization headers with HTTPS
+                      },
                       body: JSON.stringify(data.Items),
                   };
               } catch (error) {
                   return {
                       statusCode: 500,
+                      headers: {
+                        "Access-Control-Allow-Origin" : "*", // Required for CORS support to work
+                        "Access-Control-Allow-Credentials" : true // Required for cookies, authorization headers with HTTPS
+                      },
                       body: JSON.stringify({ error: error.message }),
                   };
               }
@@ -83,11 +91,19 @@ Resources:
                   const data = await client.send(new ScanCommand(params));
                   return {
                       statusCode: 200,
+                      headers: {
+                        "Access-Control-Allow-Origin" : "*", // Required for CORS support to work
+                        "Access-Control-Allow-Credentials" : true // Required for cookies, authorization headers with HTTPS
+                      },
                       body: JSON.stringify(data.Items),
                   };
               } catch (error) {
                   return {
                       statusCode: 500,
+                      headers: {
+                        "Access-Control-Allow-Origin" : "*", // Required for CORS support to work
+                        "Access-Control-Allow-Credentials" : true // Required for cookies, authorization headers with HTTPS
+                      },
                       body: JSON.stringify({ error: error.message }),
                   };
               }
@@ -112,11 +128,19 @@ Resources:
                   const data = await client.send(new ScanCommand(params));
                   return {
                       statusCode: 200,
+                      headers: {
+                        "Access-Control-Allow-Origin" : "*", // Required for CORS support to work
+                        "Access-Control-Allow-Credentials" : true // Required for cookies, authorization headers with HTTPS
+                      },
                       body: JSON.stringify(data.Items),
                   };
               } catch (error) {
                   return {
                       statusCode: 500,
+                      headers: {
+                        "Access-Control-Allow-Origin" : "*", // Required for CORS support to work
+                        "Access-Control-Allow-Credentials" : true // Required for cookies, authorization headers with HTTPS
+                      },
                       body: JSON.stringify({ error: error.message }),
                   };
               }
